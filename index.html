@@ -1,14 +1,395 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Global VAT, GST & Indirect Tax Calculator for 40+ countries. Built for modern businesses and developers." />
-    <title>TaxWise — Global Tax Calculator</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Global VAT, GST & Indirect Tax Calculator for 40+ countries." />
+  <title>TaxWise — Global Tax Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#080D1A;font-family:'DM Sans','Segoe UI',sans-serif;color:#fff;overflow-x:hidden}
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-track{background:#0d1220}
+    ::-webkit-scrollbar-thumb{background:#2a3550;border-radius:3px}
+    input,select{outline:none;font-family:inherit}
+    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+    .result-animate{animation:pulse 0.5s ease}
+    .nav-link{transition:color 0.2s;cursor:pointer}
+    .nav-link:hover{color:#F0A500}
+    .tab-btn{transition:all 0.2s;cursor:pointer}
+    .tab-btn:hover{background:rgba(255,255,255,0.05)}
+    .country-btn{transition:all 0.2s;cursor:pointer}
+    .country-btn:hover{border-color:rgba(240,165,0,0.4) !important;background:rgba(240,165,0,0.05) !important}
+    option{background:#1e293b}
+    @media(max-width:768px){.hero-split{flex-direction:column !important}.grid-3{grid-template-columns:1fr 1fr !important}}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TAX_DATA = {
+  "Germany":{"rate":19,"reduced":7,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇩🇪"},
+  "France":{"rate":20,"reduced":5.5,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇫🇷"},
+  "United Kingdom":{"rate":20,"reduced":5,"type":"VAT","currency":"GBP","symbol":"£","flag":"🇬🇧"},
+  "Italy":{"rate":22,"reduced":10,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇮🇹"},
+  "Spain":{"rate":21,"reduced":10,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇪🇸"},
+  "Netherlands":{"rate":21,"reduced":9,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇳🇱"},
+  "Sweden":{"rate":25,"reduced":12,"type":"VAT","currency":"SEK","symbol":"kr","flag":"🇸🇪"},
+  "Norway":{"rate":25,"reduced":15,"type":"VAT","currency":"NOK","symbol":"kr","flag":"🇳🇴"},
+  "Denmark":{"rate":25,"reduced":0,"type":"VAT","currency":"DKK","symbol":"kr","flag":"🇩🇰"},
+  "Poland":{"rate":23,"reduced":8,"type":"VAT","currency":"PLN","symbol":"zł","flag":"🇵🇱"},
+  "Belgium":{"rate":21,"reduced":6,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇧🇪"},
+  "Portugal":{"rate":23,"reduced":6,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇵🇹"},
+  "Ireland":{"rate":23,"reduced":9,"type":"VAT","currency":"EUR","symbol":"€","flag":"🇮🇪"},
+  "Switzerland":{"rate":8.1,"reduced":2.6,"type":"VAT","currency":"CHF","symbol":"CHF","flag":"🇨🇭"},
+  "Turkey":{"rate":20,"reduced":10,"type":"VAT","currency":"TRY","symbol":"₺","flag":"🇹🇷"},
+  "Australia":{"rate":10,"reduced":0,"type":"GST","currency":"AUD","symbol":"A$","flag":"🇦🇺"},
+  "New Zealand":{"rate":15,"reduced":0,"type":"GST","currency":"NZD","symbol":"NZ$","flag":"🇳🇿"},
+  "Canada":{"rate":5,"reduced":0,"type":"GST","currency":"CAD","symbol":"CA$","flag":"🇨🇦"},
+  "Singapore":{"rate":9,"reduced":0,"type":"GST","currency":"SGD","symbol":"S$","flag":"🇸🇬"},
+  "India":{"rate":18,"reduced":5,"type":"GST","currency":"INR","symbol":"₹","flag":"🇮🇳"},
+  "Japan":{"rate":10,"reduced":8,"type":"CT","currency":"JPY","symbol":"¥","flag":"🇯🇵"},
+  "South Korea":{"rate":10,"reduced":0,"type":"VAT","currency":"KRW","symbol":"₩","flag":"🇰🇷"},
+  "China":{"rate":13,"reduced":9,"type":"VAT","currency":"CNY","symbol":"¥","flag":"🇨🇳"},
+  "Thailand":{"rate":7,"reduced":0,"type":"VAT","currency":"THB","symbol":"฿","flag":"🇹🇭"},
+  "Philippines":{"rate":12,"reduced":0,"type":"VAT","currency":"PHP","symbol":"₱","flag":"🇵🇭"},
+  "Malaysia":{"rate":10,"reduced":6,"type":"SST","currency":"MYR","symbol":"RM","flag":"🇲🇾"},
+  "UAE":{"rate":5,"reduced":0,"type":"VAT","currency":"AED","symbol":"AED","flag":"🇦🇪"},
+  "Saudi Arabia":{"rate":15,"reduced":0,"type":"VAT","currency":"SAR","symbol":"SAR","flag":"🇸🇦"},
+  "South Africa":{"rate":15,"reduced":0,"type":"VAT","currency":"ZAR","symbol":"R","flag":"🇿🇦"},
+  "Nigeria":{"rate":7.5,"reduced":0,"type":"VAT","currency":"NGN","symbol":"₦","flag":"🇳🇬"},
+  "Kenya":{"rate":16,"reduced":0,"type":"VAT","currency":"KES","symbol":"KSh","flag":"🇰🇪"},
+  "Egypt":{"rate":14,"reduced":5,"type":"VAT","currency":"EGP","symbol":"E£","flag":"🇪🇬"},
+  "Pakistan":{"rate":17,"reduced":10,"type":"GST","currency":"PKR","symbol":"₨","flag":"🇵🇰"},
+  "Mexico":{"rate":16,"reduced":0,"type":"VAT","currency":"MXN","symbol":"MX$","flag":"🇲🇽"},
+  "Brazil":{"rate":17,"reduced":12,"type":"ICMS","currency":"BRL","symbol":"R$","flag":"🇧🇷"},
+  "Argentina":{"rate":21,"reduced":10.5,"type":"VAT","currency":"ARS","symbol":"AR$","flag":"🇦🇷"},
+  "Chile":{"rate":19,"reduced":0,"type":"VAT","currency":"CLP","symbol":"CL$","flag":"🇨🇱"},
+  "Colombia":{"rate":19,"reduced":5,"type":"VAT","currency":"COP","symbol":"COP$","flag":"🇨🇴"},
+  "Russia":{"rate":20,"reduced":10,"type":"VAT","currency":"RUB","symbol":"₽","flag":"🇷🇺"},
+};
+
+const CATEGORIES = [
+  {id:"standard",label:"Standard Goods & Services",rateType:"standard"},
+  {id:"reduced",label:"Food & Essentials (Reduced Rate)",rateType:"reduced"},
+  {id:"digital",label:"Digital Services",rateType:"standard"},
+  {id:"exempt",label:"Exempt (Medical, Education)",rateType:"exempt"},
+];
+
+const PLANS = [
+  {name:"Starter",price:0,period:"forever",color:"#64748b",features:["500 calculations/month","20 countries","Basic API access","Email support"],cta:"Start Free",popular:false},
+  {name:"Growth",price:29,period:"month",color:"#F0A500",features:["10,000 calculations/month","All 40+ countries","Full API + webhooks","Bulk CSV export","Priority support"],cta:"Start 14-day Trial",popular:true},
+  {name:"Enterprise",price:99,period:"month",color:"#6366f1",features:["Unlimited calculations","Custom country rules","White-label API","Dedicated account manager","SLA guarantee"],cta:"Contact Sales",popular:false},
+];
+
+const fmt = (n, sym) => `${sym}${parseFloat(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+function App() {
+  const [activeTab, setActiveTab] = useState("calculator");
+  const [selectedCountry, setSelectedCountry] = useState("Germany");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("standard");
+  const [priceType, setPriceType] = useState("exclusive");
+  const [result, setResult] = useState(null);
+  const [search, setSearch] = useState("");
+  const [animateResult, setAnimateResult] = useState(false);
+  const [compareAmount, setCompareAmount] = useState("1000");
+
+  const filteredCountries = Object.entries(TAX_DATA).filter(([name]) =>
+    name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (!amount || isNaN(parseFloat(amount))) { setResult(null); return; }
+    const data = TAX_DATA[selectedCountry];
+    const cat = CATEGORIES.find(c => c.id === category);
+    const num = parseFloat(amount);
+    let rate = cat.rateType === "standard" ? data.rate : cat.rateType === "reduced" ? data.reduced : 0;
+    let netAmount, taxAmount, grossAmount;
+    if (priceType === "exclusive") {
+      netAmount = num; taxAmount = num*(rate/100); grossAmount = num+taxAmount;
+    } else {
+      grossAmount = num; taxAmount = num - num/(1+rate/100); netAmount = num-taxAmount;
+    }
+    setResult({netAmount,taxAmount,grossAmount,rate,data,country:selectedCountry});
+    setAnimateResult(true);
+    setTimeout(()=>setAnimateResult(false),600);
+  }, [amount, selectedCountry, category, priceType]);
+
+  const S = {
+    nav:{position:"sticky",top:0,zIndex:100,background:"rgba(8,13,26,0.9)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"0 5%",display:"flex",alignItems:"center",justifyContent:"space-between",height:"64px"},
+    logo:{display:"flex",alignItems:"center",gap:"10px"},
+    logoBox:{width:32,height:32,borderRadius:"8px",background:"linear-gradient(135deg,#F0A500,#e07b00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",fontWeight:800,color:"#000"},
+    logoText:{fontFamily:"'DM Serif Display',serif",fontSize:"20px"},
+    badge:{display:"inline-block",background:"rgba(240,165,0,0.1)",border:"1px solid rgba(240,165,0,0.3)",borderRadius:"100px",padding:"6px 16px",fontSize:"12px",color:"#F0A500",fontWeight:600,letterSpacing:"0.5px",marginBottom:"24px"},
+    hero:{padding:"80px 5% 60px",textAlign:"center",background:"radial-gradient(ellipse 80% 50% at 50% -20%,rgba(240,165,0,0.15) 0%,transparent 60%)"},
+    h1:{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(36px,6vw,68px)",lineHeight:1.1,marginBottom:"20px",background:"linear-gradient(135deg,#fff 40%,#F0A500 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"},
+    card:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"16px",padding:"24px"},
+    goldCard:{background:"linear-gradient(135deg,rgba(240,165,0,0.08),rgba(240,165,0,0.02))",border:"1px solid rgba(240,165,0,0.25)",borderRadius:"16px",padding:"24px"},
+    input:{width:"100%",padding:"12px 14px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"10px",color:"#fff",fontSize:"14px"},
+    label:{fontSize:"12px",color:"#64748b",fontWeight:600,letterSpacing:"0.5px",display:"block",marginBottom:"8px"},
+    tag:{background:"rgba(240,165,0,0.15)",color:"#F0A500",padding:"3px 10px",borderRadius:"100px",fontSize:"12px",fontWeight:700},
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#080D1A",fontFamily:"'DM Sans','Segoe UI',sans-serif",color:"#fff",overflowX:"hidden"}}>
+      <nav style={S.nav}>
+        <div style={S.logo}>
+          <div style={S.logoBox}>T</div>
+          <span style={S.logoText}>Tax<span style={{color:"#F0A500"}}>Wise</span></span>
+        </div>
+        <div style={{display:"flex",gap:"24px",fontSize:"14px",color:"#94a3b8"}}>
+          {[["calculator","Calculator"],["compare","Compare"],["pricing","Pricing"],["apidocs","API"]].map(([id,label])=>(
+            <span key={id} className="nav-link" onClick={()=>setActiveTab(id)}
+              style={{color:activeTab===id?"#F0A500":"#94a3b8",fontWeight:activeTab===id?600:400}}>{label}</span>
+          ))}
+        </div>
+        <button style={{background:"linear-gradient(135deg,#F0A500,#e07b00)",border:"none",borderRadius:"8px",padding:"8px 18px",color:"#000",fontWeight:700,fontSize:"13px",cursor:"pointer"}}>
+          Get API Key →
+        </button>
+      </nav>
+
+      <div style={S.hero}>
+        <div style={S.badge}>🌍 40+ COUNTRIES · REAL-TIME RATES · VAT / GST / SST</div>
+        <h1 style={S.h1}>Global Tax Calculator<br/>Built for Modern Business</h1>
+        <p style={{color:"#64748b",fontSize:"17px",maxWidth:"540px",margin:"0 auto 36px",lineHeight:1.7}}>
+          Instantly calculate VAT, GST & indirect taxes across 40+ countries. Embed our API in minutes. Scale globally, stay compliant.
+        </p>
+        <div style={{display:"flex",gap:"12px",justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>setActiveTab("calculator")} style={{background:"linear-gradient(135deg,#F0A500,#e07b00)",border:"none",borderRadius:"10px",padding:"14px 28px",color:"#000",fontWeight:700,fontSize:"15px",cursor:"pointer"}}>Try Calculator Free →</button>
+          <button onClick={()=>setActiveTab("apidocs")} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",padding:"14px 28px",color:"#fff",fontWeight:600,fontSize:"15px",cursor:"pointer"}}>View API Docs</button>
+        </div>
+        <div style={{display:"flex",justifyContent:"center",gap:"48px",marginTop:"56px",flexWrap:"wrap"}}>
+          {[["40+","Countries"],["99.9%","API Uptime"],["< 50ms","Response Time"],["Free","To Start"]].map(([v,l])=>(
+            <div key={l} style={{textAlign:"center"}}>
+              <div style={{fontFamily:"'DM Serif Display',serif",fontSize:"28px",color:"#F0A500"}}>{v}</div>
+              <div style={{fontSize:"13px",color:"#475569",marginTop:"4px"}}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"0 5%",marginBottom:"8px"}}>
+        <div style={{display:"flex",gap:"4px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",padding:"4px",width:"fit-content"}}>
+          {[["calculator","🧮 Calculator"],["compare","⚖️ Compare"],["pricing","💳 Pricing"],["apidocs","🔌 API"]].map(([id,label])=>(
+            <button key={id} className="tab-btn" onClick={()=>setActiveTab(id)} style={{padding:"8px 20px",borderRadius:"8px",border:activeTab===id?"1px solid rgba(240,165,0,0.3)":"1px solid transparent",background:activeTab===id?"rgba(240,165,0,0.15)":"transparent",color:activeTab===id?"#F0A500":"#64748b",fontWeight:600,fontSize:"13px"}}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"24px 5% 80px"}}>
+        {activeTab==="calculator" && (
+          <div style={{display:"flex",gap:"24px",flexWrap:"wrap"}} className="hero-split">
+            <div style={{flex:"1 1 280px"}}>
+              <div style={S.card}>
+                <div style={S.label}>SELECT COUNTRY</div>
+                <input placeholder="🔍 Search countries..." value={search} onChange={e=>setSearch(e.target.value)} style={{...S.input,marginBottom:"12px"}}/>
+                <div style={{maxHeight:"440px",overflowY:"auto",display:"flex",flexDirection:"column",gap:"6px"}}>
+                  {filteredCountries.map(([name,data])=>(
+                    <button key={name} className="country-btn" onClick={()=>setSelectedCountry(name)} style={{background:selectedCountry===name?"linear-gradient(135deg,rgba(240,165,0,0.2),rgba(240,165,0,0.05))":"rgba(255,255,255,0.03)",border:selectedCountry===name?"1px solid rgba(240,165,0,0.6)":"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",padding:"10px 14px",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",width:"100%"}}>
+                      <span style={{fontSize:"20px"}}>{data.flag}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{color:"#fff",fontSize:"13px",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{name}</div>
+                        <div style={{color:"#F0A500",fontSize:"11px",fontWeight:700}}>{data.type} {data.rate}%</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{flex:"2 1 400px"}}>
+              <div style={{...S.goldCard,display:"flex",alignItems:"center",gap:"16px",marginBottom:"16px"}}>
+                <span style={{fontSize:"40px"}}>{TAX_DATA[selectedCountry]?.flag}</span>
+                <div>
+                  <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"24px",marginBottom:"6px"}}>{selectedCountry}</h2>
+                  <div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>
+                    <span style={S.tag}>{TAX_DATA[selectedCountry]?.type} {TAX_DATA[selectedCountry]?.rate}%</span>
+                    {TAX_DATA[selectedCountry]?.reduced>0 && <span style={{...S.tag,background:"rgba(99,102,241,0.15)",color:"#818cf8"}}>Reduced {TAX_DATA[selectedCountry]?.reduced}%</span>}
+                    <span style={{...S.tag,background:"rgba(255,255,255,0.08)",color:"#94a3b8"}}>{TAX_DATA[selectedCountry]?.currency}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{...S.card,marginBottom:"16px"}}>
+                <div style={{marginBottom:"16px"}}>
+                  <label style={S.label}>AMOUNT</label>
+                  <div style={{position:"relative"}}>
+                    <span style={{position:"absolute",left:"14px",top:"50%",transform:"translateY(-50%)",color:"#F0A500",fontWeight:700,fontSize:"16px"}}>{TAX_DATA[selectedCountry]?.symbol}</span>
+                    <input type="number" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} style={{...S.input,paddingLeft:"40px",fontSize:"20px",fontWeight:600}}/>
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
+                  <div>
+                    <label style={S.label}>CATEGORY</label>
+                    <select value={category} onChange={e=>setCategory(e.target.value)} style={S.input}>
+                      {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={S.label}>PRICE TYPE</label>
+                    <div style={{display:"flex",borderRadius:"10px",overflow:"hidden",border:"1px solid rgba(255,255,255,0.12)"}}>
+                      {[["exclusive","Ex-Tax"],["inclusive","Inc-Tax"]].map(([v,l])=>(
+                        <button key={v} onClick={()=>setPriceType(v)} style={{flex:1,padding:"12px 8px",background:priceType===v?"rgba(240,165,0,0.2)":"rgba(255,255,255,0.03)",border:"none",color:priceType===v?"#F0A500":"#64748b",fontWeight:600,fontSize:"13px",cursor:"pointer"}}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {result ? (
+                <div style={S.goldCard} className={animateResult?"result-animate":""}>
+                  <div style={S.label}>CALCULATION RESULT</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px",marginBottom:"16px"}} className="grid-3">
+                    {[["Net Amount",fmt(result.netAmount,result.data.symbol),"#fff"],["Tax Amount",fmt(result.taxAmount,result.data.symbol),"#F0A500"],["Gross Amount",fmt(result.grossAmount,result.data.symbol),"#4ade80"]].map(([label,value,color])=>(
+                      <div key={label} style={{background:"rgba(0,0,0,0.3)",borderRadius:"12px",padding:"16px",textAlign:"center"}}>
+                        <div style={{fontSize:"11px",color:"#475569",marginBottom:"8px",fontWeight:600}}>{label}</div>
+                        <div style={{fontSize:"16px",fontWeight:700,color,fontFamily:"'DM Serif Display',serif"}}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginBottom:"12px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",color:"#64748b",marginBottom:"6px"}}>
+                      <span>Tax Breakdown</span><span style={{color:"#F0A500"}}>{result.rate}% applied</span>
+                    </div>
+                    <div style={{background:"rgba(255,255,255,0.08)",borderRadius:"100px",height:"8px",overflow:"hidden"}}>
+                      <div style={{width:`${(result.taxAmount/result.grossAmount)*100}%`,height:"100%",borderRadius:"100px",background:"linear-gradient(90deg,#F0A500,#e07b00)",transition:"width 0.5s ease"}}/>
+                    </div>
+                  </div>
+                  <div style={{background:"rgba(0,0,0,0.4)",borderRadius:"10px",padding:"12px 16px",fontFamily:"monospace",fontSize:"12px",color:"#94a3b8",lineHeight:1.8}}>
+                    <span style={{color:"#64748b"}}>{"//"} API call</span><br/>
+                    <span style={{color:"#F0A500"}}>GET</span> /v1/calculate?<span style={{color:"#a78bfa"}}>country</span>=<span style={{color:"#4ade80"}}>{result.country.toLowerCase().replace(/ /g,"_")}</span>&amp;<span style={{color:"#a78bfa"}}>amount</span>=<span style={{color:"#4ade80"}}>{amount}</span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{background:"rgba(255,255,255,0.02)",border:"1px dashed rgba(255,255,255,0.1)",borderRadius:"16px",padding:"40px",textAlign:"center",color:"#334155"}}>
+                  <div style={{fontSize:"40px",marginBottom:"12px"}}>🧮</div>
+                  <div>Enter an amount to see the tax breakdown</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab==="compare" && (
+          <div>
+            <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"28px",marginBottom:"8px"}}>Compare Tax Rates</h2>
+            <p style={{color:"#64748b",marginBottom:"24px"}}>See how indirect taxes differ across countries for the same transaction</p>
+            <div style={{marginBottom:"24px"}}>
+              <label style={S.label}>TRANSACTION AMOUNT (USD)</label>
+              <input type="number" value={compareAmount} onChange={e=>setCompareAmount(e.target.value)} style={{...S.input,width:"200px",fontSize:"16px"}}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:"14px"}}>
+              {Object.entries(TAX_DATA).sort((a,b)=>b[1].rate-a[1].rate).map(([name,data])=>{
+                const amt=parseFloat(compareAmount)||1000;
+                const tax=amt*(data.rate/100);
+                return (
+                  <div key={name} style={S.card}>
+                    <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"14px"}}>
+                      <span style={{fontSize:"22px"}}>{data.flag}</span>
+                      <div><div style={{fontWeight:600,fontSize:"14px"}}>{name}</div><div style={{fontSize:"12px",color:"#475569"}}>{data.type} · {data.currency}</div></div>
+                      <div style={{marginLeft:"auto",fontSize:"20px",fontWeight:700,color:"#F0A500"}}>{data.rate}%</div>
+                    </div>
+                    <div style={{background:"rgba(255,255,255,0.05)",borderRadius:"8px",height:"6px",marginBottom:"10px"}}>
+                      <div style={{width:`${(data.rate/25)*100}%`,height:"100%",background:data.rate>20?"#ef4444":data.rate>15?"#F0A500":"#4ade80",borderRadius:"8px"}}/>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:"13px"}}>
+                      <span style={{color:"#64748b"}}>Tax on ${amt.toLocaleString()}</span>
+                      <span style={{color:"#fff",fontWeight:600}}>${tax.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {activeTab==="pricing" && (
+          <div>
+            <div style={{textAlign:"center",marginBottom:"48px"}}>
+              <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"36px",marginBottom:"12px"}}>Simple, Transparent Pricing</h2>
+              <p style={{color:"#64748b",fontSize:"16px"}}>Start free. Scale as you grow. No surprise fees.</p>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:"20px",maxWidth:"900px",margin:"0 auto"}}>
+              {PLANS.map(plan=>(
+                <div key={plan.name} style={{background:plan.popular?"linear-gradient(135deg,rgba(240,165,0,0.08),rgba(240,165,0,0.02))":"rgba(255,255,255,0.02)",border:plan.popular?"1px solid rgba(240,165,0,0.35)":"1px solid rgba(255,255,255,0.07)",borderRadius:"20px",padding:"32px",position:"relative"}}>
+                  {plan.popular && <div style={{position:"absolute",top:"-12px",left:"50%",transform:"translateX(-50%)",background:"linear-gradient(135deg,#F0A500,#e07b00)",color:"#000",padding:"4px 16px",borderRadius:"100px",fontSize:"11px",fontWeight:800,letterSpacing:"0.5px",whiteSpace:"nowrap"}}>MOST POPULAR</div>}
+                  <div style={{marginBottom:"24px"}}>
+                    <div style={{fontSize:"13px",color:plan.color,fontWeight:700,letterSpacing:"1px",marginBottom:"8px"}}>{plan.name.toUpperCase()}</div>
+                    <div style={{display:"flex",alignItems:"baseline",gap:"6px"}}>
+                      <span style={{fontFamily:"'DM Serif Display',serif",fontSize:"42px"}}>${plan.price}</span>
+                      <span style={{color:"#475569",fontSize:"14px"}}>/{plan.period}</span>
+                    </div>
+                  </div>
+                  <div style={{marginBottom:"28px"}}>
+                    {plan.features.map(f=>(
+                      <div key={f} style={{display:"flex",gap:"10px",alignItems:"center",marginBottom:"12px"}}>
+                        <span style={{color:plan.color}}>✓</span>
+                        <span style={{fontSize:"14px",color:"#94a3b8"}}>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button style={{width:"100%",padding:"14px",background:plan.popular?"linear-gradient(135deg,#F0A500,#e07b00)":"rgba(255,255,255,0.06)",border:"none",borderRadius:"10px",color:plan.popular?"#000":"#fff",fontWeight:700,fontSize:"14px",cursor:"pointer"}}>{plan.cta}</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab==="apidocs" && (
+          <div style={{maxWidth:"800px"}}>
+            <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"32px",marginBottom:"8px"}}>API Documentation</h2>
+            <p style={{color:"#64748b",marginBottom:"32px"}}>Embed global tax calculations in your app with one API call.</p>
+            {[
+              {title:"Calculate Tax",method:"GET",endpoint:"/v1/calculate",desc:"Calculate VAT/GST for any amount in any supported country.",
+               req:`curl https://api.taxwise.io/v1/calculate \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -d "country=germany" \\\n  -d "amount=1000"`,
+               res:`{\n  "country": "Germany",\n  "tax_type": "VAT",\n  "rate": 19,\n  "net_amount": 1000.00,\n  "tax_amount": 190.00,\n  "gross_amount": 1190.00\n}`},
+              {title:"List Countries",method:"GET",endpoint:"/v1/countries",desc:"Get all supported countries with current tax rates.",
+               req:`curl https://api.taxwise.io/v1/countries \\\n  -H "Authorization: Bearer YOUR_API_KEY"`,
+               res:`{\n  "countries": [\n    {"name":"Germany","type":"VAT","rate":19},\n    {"name":"Australia","type":"GST","rate":10}\n  ]\n}`},
+            ].map(api=>(
+              <div key={api.title} style={{...S.card,marginBottom:"20px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"10px"}}>
+                  <span style={{background:"rgba(240,165,0,0.15)",color:"#F0A500",padding:"4px 10px",borderRadius:"6px",fontSize:"12px",fontWeight:800}}>{api.method}</span>
+                  <code style={{color:"#a78bfa",fontSize:"14px"}}>{api.endpoint}</code>
+                  <span style={{fontWeight:600,fontSize:"14px",marginLeft:"auto"}}>{api.title}</span>
+                </div>
+                <p style={{color:"#64748b",fontSize:"14px",marginBottom:"14px"}}>{api.desc}</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+                  {[["Request",api.req,"#F0A500"],["Response",api.res,"#4ade80"]].map(([label,code,color])=>(
+                    <div key={label}>
+                      <div style={{fontSize:"11px",color:"#475569",fontWeight:700,marginBottom:"6px"}}>{label}</div>
+                      <pre style={{background:"rgba(0,0,0,0.5)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",padding:"14px",fontSize:"12px",color,overflow:"auto",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{code}</pre>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <footer style={{borderTop:"1px solid rgba(255,255,255,0.06)",padding:"28px 5%",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"12px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+          <div style={{width:28,height:28,borderRadius:"7px",background:"linear-gradient(135deg,#F0A500,#e07b00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:800,color:"#000"}}>T</div>
+          <span style={{fontFamily:"'DM Serif Display',serif",fontSize:"17px"}}>Tax<span style={{color:"#F0A500"}}>Wise</span></span>
+        </div>
+        <div style={{fontSize:"13px",color:"#334155"}}>© 2025 TaxWise · Not financial/legal advice</div>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
 </html>
